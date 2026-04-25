@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function Topbar({ cartCount, onCartOpen }) {
+export default function Topbar({ cartCount, onCartOpen, user, onLogout }) {
   const [time, setTime] = useState('')
 
   useEffect(() => {
@@ -25,7 +25,11 @@ export default function Topbar({ cartCount, onCartOpen }) {
       <div className="topbar-right">
         <button className="topbar-nav on">STORE</button>
         <button className="topbar-nav" onClick={onCartOpen}>CART</button>
-        <button className="topbar-nav">ABOUT</button>
+        {user && (
+          <button className="topbar-nav" onClick={onLogout}>
+            {user.name || user.email} — LOGOUT
+          </button>
+        )}
       </div>
     </div>
   )
