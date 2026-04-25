@@ -6,6 +6,7 @@ export default function Interview({ product, onClose, onVerdict }) {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [verdict, setVerdict] = useState(null)
+  const [imgLoaded, setImgLoaded] = useState(true)
   const logRef = useRef(null)
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function Interview({ product, onClose, onVerdict }) {
       }
     } catch(e) {
       setLoading(false)
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Backend not connected. Your friend needs to run the server.' }])
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Backend not connected yet. Your friend needs to run the server.' }])
     }
   }
 
@@ -62,7 +63,7 @@ export default function Interview({ product, onClose, onVerdict }) {
       position:'fixed',inset:0,background:'#0a0a0a',zIndex:500,
       display:'grid',gridTemplateColumns:'1fr 1fr'
     }}>
-      {/* LEFT — Product Image */}
+      {/* LEFT */}
       <div style={{
         borderRight:'1px solid #1e1e1e',
         display:'flex',
@@ -74,7 +75,6 @@ export default function Interview({ product, onClose, onVerdict }) {
         background:'#080808',
         padding:'40px'
       }}>
-        {/* Ghost background word */}
         <div style={{
           position:'absolute',
           fontFamily:'Anton, sans-serif',
@@ -90,22 +90,23 @@ export default function Interview({ product, onClose, onVerdict }) {
           userSelect:'none'
         }}>{product.bg}</div>
 
-        {/* Product image — big */}
-        <img
-          src={product.img}
-          alt={product.name}
-          style={{
-            position:'relative',
-            zIndex:2,
-            width:'85%',
-            height:'75%',
-            objectFit:'contain',
-            filter:'drop-shadow(0 0 60px rgba(232,228,220,0.12))',
-            animation:'float 4s ease-in-out infinite'
-          }}
-        />
+        {imgLoaded && (
+          <img
+            src={product.img}
+            alt={product.name}
+            onError={() => setImgLoaded(false)}
+            style={{
+              position:'relative',
+              zIndex:2,
+              width:'85%',
+              height:'70%',
+              objectFit:'contain',
+              filter:'drop-shadow(0 0 60px rgba(232,228,220,0.15))',
+              animation:'float 4s ease-in-out infinite'
+            }}
+          />
+        )}
 
-        {/* Product info bottom */}
         <div style={{
           position:'absolute',
           bottom:0,left:0,right:0,
@@ -132,15 +133,22 @@ export default function Interview({ product, onClose, onVerdict }) {
         </div>
       </div>
 
-      {/* RIGHT — Conversation */}
+      {/* RIGHT */}
       <div style={{
         display:'flex',
         flexDirection:'column',
         padding:'48px',
-        background:'#0a0a0a'
+        background:'#0a0a0a',
+        height:'100vh'
       }}>
-        {/* Header */}
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'40px'}}>
+        <div style={{
+          display:'flex',
+          justifyContent:'space-between',
+          alignItems:'center',
+          marginBottom:'32px',
+          paddingBottom:'16px',
+          borderBottom:'1px solid #141414'
+        }}>
           <div style={{
             fontFamily:'DM Mono, monospace',
             fontSize:'8px',
@@ -161,15 +169,14 @@ export default function Interview({ product, onClose, onVerdict }) {
           }}>✕ CLOSE</button>
         </div>
 
-        {/* Chat log */}
         <div ref={logRef} style={{
           flex:1,
           overflowY:'auto',
           display:'flex',
           flexDirection:'column',
-          gap:'24px',
+          gap:'28px',
           marginBottom:'24px',
-          paddingRight:'8px'
+          paddingRight:'4px'
         }}>
           {messages.map((m, i) => (
             <div key={i} style={{
@@ -179,16 +186,16 @@ export default function Interview({ product, onClose, onVerdict }) {
             }}>
               <div style={{
                 fontFamily: m.role === 'assistant' ? 'DM Sans, sans-serif' : 'DM Mono, monospace',
-                fontSize: m.role === 'assistant' ? '15px' : '11px',
+                fontSize: m.role === 'assistant' ? '15px' : '12px',
                 fontStyle: m.role === 'assistant' ? 'italic' : 'normal',
-                fontWeight: m.role === 'assistant' ? '200' : '300',
+                fontWeight: '200',
                 lineHeight:'1.8',
-                color: m.role === 'assistant' ? '#666' : '#aaa',
-                borderLeft: m.role === 'assistant' ? '1px solid #1a1a1a' : 'none',
+                color: m.role === 'assistant' ? '#777' : '#bbb',
+                borderLeft: m.role === 'assistant' ? '1px solid #1e1e1e' : 'none',
                 borderRight: m.role === 'user' ? '1px solid #2a2a2a' : 'none',
                 paddingLeft: m.role === 'assistant' ? '16px' : '0',
                 paddingRight: m.role === 'user' ? '16px' : '0',
-                maxWidth:'85%',
+                maxWidth:'88%',
                 letterSpacing: m.role === 'user' ? '0.04em' : '0'
               }}>{m.text}</div>
               <div style={{
@@ -198,25 +205,23 @@ export default function Interview({ product, onClose, onVerdict }) {
                 color:'#1a1a1a',
                 marginTop:'6px',
                 textTransform:'uppercase'
-              }}>{m.role === 'assistant' ? product.name : 'You'}</div>
+              }}>{m.role === 'assistant' ? product.name.toUpperCase() : 'YOU'}</div>
             </div>
           ))}
         </div>
 
-        {/* Thinking */}
         {loading && (
           <div style={{
             fontFamily:'DM Mono, monospace',
             fontSize:'8px',
             letterSpacing:'0.3em',
-            color:'#2a2a2a',
+            color:'#222',
             textTransform:'uppercase',
-            marginBottom:'12px',
+            marginBottom:'16px',
             animation:'pulse 1.5s infinite'
-          }}>The item is considering you...</div>
+          }}>thinking...</div>
         )}
 
-        {/* Verdict */}
         {verdict === 'pass' && (
           <div style={{
             fontFamily:'DM Mono, monospace',
@@ -230,6 +235,7 @@ export default function Interview({ product, onClose, onVerdict }) {
             marginBottom:'16px'
           }}>Approved — added to your cart</div>
         )}
+
         {verdict === 'fail' && (
           <div style={{
             fontFamily:'DM Mono, monospace',
@@ -244,20 +250,24 @@ export default function Interview({ product, onClose, onVerdict }) {
           }}>Denied — you did not qualify</div>
         )}
 
-        {/* Input */}
         {!done && (
-          <div style={{display:'flex',borderTop:'1px solid #1a1a1a',paddingTop:'20px'}}>
+          <div style={{
+            display:'flex',
+            borderTop:'1px solid #141414',
+            paddingTop:'20px',
+            gap:'0'
+          }}>
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
-              placeholder="Your answer..."
+              placeholder="say something..."
               autoFocus
               style={{
                 flex:1,
                 background:'transparent',
                 border:'none',
-                borderBottom:'1px solid #1a1a1a',
+                borderBottom:'1px solid #141414',
                 color:'#e8e4dc',
                 fontSize:'13px',
                 padding:'14px 0',
@@ -278,9 +288,10 @@ export default function Interview({ product, onClose, onVerdict }) {
                 fontSize:'8px',
                 letterSpacing:'0.3em',
                 textTransform:'uppercase',
-                cursor:'pointer',
+                cursor: loading ? 'not-allowed' : 'pointer',
                 fontFamily:'DM Mono, monospace',
-                opacity: loading ? 0.1 : 1
+                opacity: loading ? 0.2 : 1,
+                transition:'opacity 0.2s'
               }}
             >SEND</button>
           </div>
