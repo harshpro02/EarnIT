@@ -10,6 +10,7 @@ createRoot(document.getElementById('root')).render(
       domain="harshpro02.ca.auth0.com"
       clientId="WwYRcRaTjoRjASwDCdyAJV7VbG6sgvM8"
       authorizationParams={{ redirect_uri: window.location.origin }}
+      cacheLocation="memory"
     >
       <App />
     </Auth0Provider>

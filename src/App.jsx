@@ -54,63 +54,71 @@ export default function App() {
     setActive(null)
   }
 
+  // Loading
   if (isLoading) return (
     <div style={{
-      position:'fixed',inset:0,background:'#0a0a0a',
-      display:'flex',alignItems:'center',justifyContent:'center',
-      fontFamily:'DM Mono, monospace',fontSize:'9px',
-      letterSpacing:'0.3em',color:'#333',textTransform:'uppercase'
+      position:'fixed', inset:0, background:'#0a0a0a',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontFamily:'DM Mono, monospace', fontSize:'9px',
+      letterSpacing:'0.3em', color:'#333', textTransform:'uppercase'
     }}>Loading...</div>
   )
 
+  // Login screen
   if (!isAuthenticated) return (
-    <div style={{
-      position:'fixed',inset:0,background:'#0a0a0a',
-      display:'flex',flexDirection:'column',
-      alignItems:'center',justifyContent:'center',gap:'24px',
-      fontFamily:'DM Sans, sans-serif'
-    }}>
+    <>
+      <div className="cursor" ref={cursorRef} />
+      <div className="cursor-ring" ref={ringRef} />
       <div style={{
-        fontFamily:'Anton, sans-serif',
-        fontSize:'clamp(80px,15vw,160px)',
-        color:'#e8e4dc',
-        letterSpacing:'-0.02em',
-        lineHeight:'0.88',
-        textAlign:'center'
-      }}>EARN<br/>IT</div>
-      <div style={{
-        fontFamily:'DM Mono, monospace',
-        fontSize:'10px',
-        letterSpacing:'0.25em',
-        color:'#888',
-        textTransform:'uppercase'
-      }}>Don't shop. Qualify.</div>
-      <div style={{
-        fontFamily:'DM Mono, monospace',
-        fontSize:'8px',
-        letterSpacing:'0.2em',
-        color:'#555',
-        textTransform:'uppercase'
-      }}>BearHacks 2026 — Break the Norm</div>
-      <button
-        onClick={() => loginWithRedirect()}
-        style={{
+        position:'fixed', inset:0, background:'#0a0a0a',
+        display:'flex', flexDirection:'column',
+        alignItems:'center', justifyContent:'center', gap:'24px'
+      }}>
+        <div style={{
+          fontFamily:'Anton, sans-serif',
+          fontSize:'clamp(80px,15vw,160px)',
+          color:'#e8e4dc',
+          letterSpacing:'-0.02em',
+          lineHeight:'0.88',
+          textAlign:'center'
+        }}>
+          EARN<br/>IT
+        </div>
+        <div style={{
+          fontFamily:'DM Mono, monospace',
+          fontSize:'11px',
+          letterSpacing:'0.25em',
+          color:'#888',
+          textTransform:'uppercase'
+        }}>Don't shop. Qualify.</div>
+        <div style={{
           fontFamily:'DM Mono, monospace',
           fontSize:'9px',
-          letterSpacing:'0.35em',
-          textTransform:'uppercase',
-          color:'#e8e4dc',
-          background:'none',
-          border:'1px solid rgba(232,228,220,0.2)',
-          padding:'16px 52px',
-          cursor:'pointer',
-          marginTop:'24px',
-          transition:'border-color 0.3s'
-        }}
-      >Enter the Store</button>
-    </div>
+          letterSpacing:'0.2em',
+          color:'#444',
+          textTransform:'uppercase'
+        }}>BearHacks 2026 — Break the Norm</div>
+        <button
+          onClick={() => loginWithRedirect()}
+          style={{
+            fontFamily:'DM Mono, monospace',
+            fontSize:'10px',
+            letterSpacing:'0.35em',
+            textTransform:'uppercase',
+            color:'#e8e4dc',
+            background:'none',
+            border:'1px solid rgba(232,228,220,0.25)',
+            padding:'18px 56px',
+            cursor:'none',
+            marginTop:'16px',
+            transition:'border-color 0.3s'
+          }}
+        >Enter the Store</button>
+      </div>
+    </>
   )
 
+  // Main app
   return (
     <>
       <div className="cursor" ref={cursorRef} />
