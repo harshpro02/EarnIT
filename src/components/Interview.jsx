@@ -1,48 +1,125 @@
 import { useState, useRef, useEffect } from 'react'
 
+const BACKEND = 'http://localhost:3001'
+
 export default function Interview({ product, onClose, onVerdict }) {
   const [messages, setMessages] = useState([{ role: 'assistant', text: product.opening }])
-  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [verdict, setVerdict] = useState(null)
   const [imgLoaded, setImgLoaded] = useState(true)
+  const [listening, setListening] = useState(false)
+  const [transcript, setTranscript] = useState('')
   const logRef = useRef(null)
+  const recognitionRef = useRef(null)
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [messages])
 
-  async function send() {
-    if (!input.trim() || loading || done) return
-    const val = input.trim()
-    setInput('')
-    const newMessages = [...messages, { role: 'user', text: val }]
+  useEffect(() => {
+    playVoice(product.opening)
+  }, [])
+
+  async function playVoice(text) {
+    try {
+      const res = await fetch(`${BACKEND}/api/speak`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, productName: product.name })
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audio.play()
+      } else {
+        browserVoice(text)
+      }
+    } catch(e) {
+      browserVoice(text)
+    }
+  }
+
+  function browserVoice(text) {
+    const synth = window.speechSynthesis
+    synth.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = 0.95
+    utterance.pitch = 1
+    utterance.volume = 1
+    synth.speak(utterance)
+  }
+
+  function startListening() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      alert('Use Chrome for mic support.')
+      return
+    }
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.interimResults = true
+    recognition.maxAlternatives = 1
+    recognition.onresult = (e) => {
+      const t = Array.from(e.results).map(r => r[0].transcript).join('')
+      setTranscript(t)
+      if (e.results[e.results.length-1].isFinal) {
+        setListening(false)
+        setTranscript('')
+        send(t)
+      }
+    }
+    recognition.onerror = () => { setListening(false); setTranscript('') }
+    recognition.onend = () => { setListening(false) }
+    recognitionRef.current = recognition
+    recognition.start()
+    setListening(true)
+  }
+
+  function stopListening() {
+    if (recognitionRef.current) recognitionRef.current.stop()
+    setListening(false)
+    setTranscript('')
+  }
+
+  async function send(val) {
+    if (!val?.trim() || loading || done) return
+    const newMessages = [...messages, { role: 'user', text: val.trim() }]
     setMessages(newMessages)
     setLoading(true)
 
-    const apiMessages = newMessages.map((m, i) => ({
-      role: i % 2 === 0 ? 'user' : 'assistant',
-      content: m.text
-    }))
+    const apiMessages = []
+    for (let i = 0; i < newMessages.length; i++) {
+      const role = newMessages[i].role === 'assistant' ? 'assistant' : 'user'
+      const content = newMessages[i].text
+      if (apiMessages.length === 0 && role === 'assistant') continue
+      if (apiMessages.length > 0 && apiMessages[apiMessages.length-1].role === role) continue
+      apiMessages.push({ role, content })
+    }
 
     try {
-      const res = await fetch('http://localhost:3001/api/interview', {
+      const res = await fetch(`${BACKEND}/api/interview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 200,
           system: product.sys,
           messages: apiMessages
         })
       })
       const data = await res.json()
       const reply = data.content?.[0]?.text || '...'
-      const clean = reply.replace(/VERDICT:(PASS|FAIL)/g, '').trim()
+      const clean = reply
+        .replace(/VERDICT:(PASS|FAIL)/g, '')
+        .replace(/\*[^*]*\*/g, '')
+        .trim()
       setLoading(false)
-      if (clean) setMessages(prev => [...prev, { role: 'assistant', text: clean }])
-
+      if (clean) {
+        setMessages(prev => [...prev, { role: 'assistant', text: clean }])
+        playVoice(clean)
+      }
       if (reply.includes('VERDICT:PASS')) {
         setVerdict('pass')
         setDone(true)
@@ -54,7 +131,7 @@ export default function Interview({ product, onClose, onVerdict }) {
       }
     } catch(e) {
       setLoading(false)
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Backend not connected yet. Your friend needs to run the server.' }])
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Connection failed.' }])
     }
   }
 
@@ -164,8 +241,7 @@ export default function Interview({ product, onClose, onVerdict }) {
             cursor:'pointer',
             textTransform:'uppercase',
             background:'none',
-            border:'none',
-            transition:'color 0.2s'
+            border:'none'
           }}>✕ CLOSE</button>
         </div>
 
@@ -188,7 +264,7 @@ export default function Interview({ product, onClose, onVerdict }) {
                 fontFamily: m.role === 'assistant' ? 'DM Sans, sans-serif' : 'DM Mono, monospace',
                 fontSize: m.role === 'assistant' ? '15px' : '12px',
                 fontStyle: m.role === 'assistant' ? 'italic' : 'normal',
-                fontWeight: '200',
+                fontWeight:'200',
                 lineHeight:'1.8',
                 color: m.role === 'assistant' ? '#777' : '#bbb',
                 borderLeft: m.role === 'assistant' ? '1px solid #1e1e1e' : 'none',
@@ -196,7 +272,6 @@ export default function Interview({ product, onClose, onVerdict }) {
                 paddingLeft: m.role === 'assistant' ? '16px' : '0',
                 paddingRight: m.role === 'user' ? '16px' : '0',
                 maxWidth:'88%',
-                letterSpacing: m.role === 'user' ? '0.04em' : '0'
               }}>{m.text}</div>
               <div style={{
                 fontFamily:'DM Mono, monospace',
@@ -208,18 +283,33 @@ export default function Interview({ product, onClose, onVerdict }) {
               }}>{m.role === 'assistant' ? product.name.toUpperCase() : 'YOU'}</div>
             </div>
           ))}
+
+          {/* Live transcript */}
+          {transcript && (
+            <div style={{
+              textAlign:'right',
+              fontFamily:'DM Mono, monospace',
+              fontSize:'12px',
+              color:'#444',
+              fontStyle:'italic',
+              paddingRight:'16px',
+              borderRight:'1px solid #1a1a1a'
+            }}>{transcript}</div>
+          )}
         </div>
 
         {loading && (
-          <div style={{
-            fontFamily:'DM Mono, monospace',
-            fontSize:'8px',
-            letterSpacing:'0.3em',
-            color:'#222',
-            textTransform:'uppercase',
-            marginBottom:'16px',
-            animation:'pulse 1.5s infinite'
-          }}>thinking...</div>
+          <div style={{display:'flex',gap:'4px',alignItems:'center',marginBottom:'16px'}}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{
+                width:'6px',height:'6px',
+                background:'#333',
+                borderRadius:'50%',
+                animation:'dotbounce 1s infinite',
+                animationDelay:`${i*0.2}s`
+              }}/>
+            ))}
+          </div>
         )}
 
         {verdict === 'pass' && (
@@ -250,50 +340,52 @@ export default function Interview({ product, onClose, onVerdict }) {
           }}>Denied — you did not qualify</div>
         )}
 
+        {/* BIG MIC BUTTON ONLY */}
         {!done && (
           <div style={{
             display:'flex',
-            borderTop:'1px solid #141414',
+            flexDirection:'column',
+            alignItems:'center',
+            gap:'12px',
             paddingTop:'20px',
-            gap:'0'
+            borderTop:'1px solid #141414'
           }}>
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && send()}
-              placeholder="say something..."
-              autoFocus
-              style={{
-                flex:1,
-                background:'transparent',
-                border:'none',
-                borderBottom:'1px solid #141414',
-                color:'#e8e4dc',
-                fontSize:'13px',
-                padding:'14px 0',
-                fontFamily:'DM Sans, sans-serif',
-                fontWeight:'200',
-                outline:'none',
-                letterSpacing:'0.05em'
-              }}
-            />
             <button
-              onClick={send}
+              onClick={listening ? stopListening : startListening}
               disabled={loading}
               style={{
-                padding:'14px 28px',
-                background:'#e8e4dc',
-                color:'#0a0a0a',
-                border:'none',
-                fontSize:'8px',
-                letterSpacing:'0.3em',
-                textTransform:'uppercase',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontFamily:'DM Mono, monospace',
-                opacity: loading ? 0.2 : 1,
-                transition:'opacity 0.2s'
+                width:'80px',
+                height:'80px',
+                borderRadius:'50%',
+                border:`2px solid ${listening ? '#c8b87a' : '#222'}`,
+                background: listening ? 'rgba(200,184,122,0.1)' : 'rgba(255,255,255,0.02)',
+                cursor:'pointer',
+                display:'flex',
+                alignItems:'center',
+                justifyContent:'center',
+                transition:'all 0.3s',
+                boxShadow: listening ? '0 0 30px rgba(200,184,122,0.3), 0 0 60px rgba(200,184,122,0.1)' : 'none',
+                animation: listening ? 'pulse-mic 1.5s infinite' : 'none',
+                opacity: loading ? 0.3 : 1
               }}
-            >SEND</button>
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={listening ? '#c8b87a' : '#555'} strokeWidth="1.5">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <div style={{
+              fontFamily:'DM Mono, monospace',
+              fontSize:'8px',
+              letterSpacing:'0.3em',
+              color: listening ? '#c8b87a' : '#1a1a1a',
+              textTransform:'uppercase',
+              transition:'color 0.3s'
+            }}>
+              {loading ? 'thinking...' : listening ? 'listening...' : 'tap to speak'}
+            </div>
           </div>
         )}
       </div>
